@@ -27,7 +27,7 @@ class Tweet {
     }
 
     get writtenText():string {
-        // Remove links and the app's hashtag before looking for a comment.
+        // Remove links and the app's hashtag before looking for a comment
         let text = this.text.replace(/https?:\/\/\S+/g, "");
         text = text.replace(/#Runkeeper\b/gi, "").trim();
 
@@ -59,15 +59,40 @@ class Tweet {
         if (this.source != 'completed_event') {
             return "unknown";
         }
-        // TODO: parse the activity type from the text of the tweet
-        return "";
+
+        // skip "Just completed/posted a" and the distance, if there is one
+        let words = this.text.split(" ");
+        let start = 3;
+        if (words[4] == "km" || words[4] == "mi") {
+            start = 5;
+        }
+
+        let activity = words.slice(start).join(" ");
+        
+        // leave out the comment, app message, and time after the activity name
+        activity = activity.split(" - ")[0];
+        activity = activity.split(" with ")[0];
+        activity = activity.split(" in ")[0];
+        return activity.trim();
     }
 
     get distance():number {
         if(this.source != 'completed_event') {
             return 0;
         }
-        // TODO: prase the distance from the text of the tweet
+        let words = this.text.split(" ");
+        let distance = parseFloat(words[3]);
+        if (isNaN(distance)) {
+            return 0;
+        }
+        if (words[4] == "km") {
+            
+            // use miles for every distance so the graphs can compare them
+            return distance / 1.609;
+        }
+        if (words[4] == "mi") {
+            return distance;
+        }
         return 0;
     }
 
