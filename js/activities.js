@@ -1,5 +1,5 @@
 function parseTweets(runkeeper_tweets) {
-	//Do not proceed if no tweets loaded
+	// stop if the tweets did not load
 	if(runkeeper_tweets === undefined) {
 		window.alert('No tweets returned');
 		return;
@@ -9,31 +9,31 @@ function parseTweets(runkeeper_tweets) {
 		return new Tweet(tweet.text, tweet.created_at);
 	});
 
-	let completedTweets = tweet_array.filter(function(tweet) {
-		return tweet.source === 'completed_event';
-	});
 	let activityCounts = {};
 	let activityData = [];
 	let days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
-	for (let tweet of completedTweets) {
-		let activity = tweet.activityType;
-		if (activityCounts[activity] === undefined) {
-			activityCounts[activity] = 0;
-		}
-		activityCounts[activity]++;
+	// count the activity types from completed tweets
+	for (let i = 0; i < tweet_array.length; i++) {
+		let tweet = tweet_array[i];
+		if (tweet.source === 'completed_event') {
+			let activity = tweet.activityType;
+			if (activityCounts[activity] === undefined) {
+				activityCounts[activity] = 0;
+			}
+			activityCounts[activity]++;
 
-		// Vega needs plain objects with the values we want to graph.
-		activityData.push({
-			activityType: activity,
-			distance: tweet.distance,
-			day: days[tweet.time.getDay()]
-		});
+			activityData.push({
+				activityType: activity,
+				distance: tweet.distance,
+				day: days[tweet.time.getDay()]
+			});
+		}
 	}
 
 	let activityTypes = Object.keys(activityCounts);
 
-	// Put the most common activities first, then take the top three.
+	// put the most common activities first, then take the top three
 	activityTypes.sort(function(a, b) {
 		return activityCounts[b] - activityCounts[a];
 	});
@@ -63,11 +63,42 @@ function parseTweets(runkeeper_tweets) {
 	};
 	vegaEmbed('#activityVis', activity_vis_spec, {actions:false});
 
-	let distanceData = activityData.filter(function(activity) {
-		return topActivities.includes(activity.activityType);
-	});
-	vegaEmbed('#distanceVis', createDistanceSpec(distanceData, days, false), {actions:false});
-	vegaEmbed('#distanceVisAggregated', createDistanceSpec(distanceData, days, true), {actions:false});
+	let distanceData = [];
+	for (let i = 0; i < activityData.length; i++) {
+		if (topActivities.includes(activityData[i].activityType)) {
+			distanceData.push(activityData[i]);
+		}
+	}
+
+	// show each activity as a point
+	let distance_vis_spec = {
+		"$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+		"data": { "values": distanceData },
+		"width": 600,
+		"height": 600,
+		"mark": { "type": "point", "opacity": 0.3 },
+		"encoding": {
+			"x": { "field": "day", "type": "ordinal", "sort": days, "title": "Day of the week", "axis": { "labelAngle": 0 } },
+			"y": { "field": "distance", "type": "quantitative", "title": "Distance (miles)" },
+			"color": { "field": "activityType", "type": "nominal", "title": "Activity type" }
+		}
+	};
+	vegaEmbed('#distanceVis', distance_vis_spec, {actions:false});
+
+	// show the mean distance for each activity on each day
+	let distance_vis_aggregated_spec = {
+		"$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+		"data": { "values": distanceData },
+		"width": 600,
+		"height": 600,
+		"mark": { "type": "point", "opacity": 1 },
+		"encoding": {
+			"x": { "field": "day", "type": "ordinal", "sort": days, "title": "Day of the week", "axis": { "labelAngle": 0 } },
+			"y": { "field": "distance", "type": "quantitative", "aggregate": "mean", "title": "Mean distance (miles)" },
+			"color": { "field": "activityType", "type": "nominal", "title": "Activity type" }
+		}
+	};
+	vegaEmbed('#distanceVisAggregated', distance_vis_aggregated_spec, {actions:false});
 
 	// comparing the distances in the mean chart
 	document.getElementById('longestActivityType').textContent = 'bike';
@@ -83,7 +114,7 @@ function parseTweets(runkeeper_tweets) {
 	button.textContent = 'Show means';
 
 
-	// Only one distance chart should be visible at a time.
+	// only show one distance chart at a time
 	button.onclick = function() {
 		if (meanDistances.style.display === 'none') {
 			allDistances.style.display = 'none';
@@ -97,28 +128,7 @@ function parseTweets(runkeeper_tweets) {
 	};
 }
 
-function createDistanceSpec(data, days, showMean) {
-	let spec = {
-		"$schema": "https://vega.github.io/schema/vega-lite/v5.json",
-		"data": { "values": data },
-		"width": 550,
-		"height": 300,
-		"mark": { "type": "point", "opacity": showMean ? 1 : 0.3 },
-		"encoding": {
-			"x": { "field": "day", "type": "ordinal", "sort": days, "title": "Day of the week", "axis": { "labelAngle": 0 } },
-			"y": { "field": "distance", "type": "quantitative", "title": "Distance (miles)" },
-			"color": { "field": "activityType", "type": "nominal", "title": "Activity type" }
-		}
-	};
-	if (showMean) {
-		// Average the distances for each activity on each day
-		spec.encoding.y.aggregate = 'mean';
-		spec.encoding.y.title = 'Mean distance (miles)';
-	}
-	return spec;
-}
-
-// wait for the DOM to load
+//Wait for the DOM to load
 document.addEventListener('DOMContentLoaded', function (event) {
 	loadSavedRunkeeperTweets().then(parseTweets);
 });

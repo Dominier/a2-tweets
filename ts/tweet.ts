@@ -12,10 +12,10 @@ class Tweet {
         if (this.text.startsWith("Just completed ") || this.text.startsWith("Just posted ")) {
             return "completed_event";
         }
-        if (this.text.startsWith("Watch my ")) {
+        if (this.text.startsWith("Watch my ") || this.text.startsWith("Watch ") || this.text.startsWith("Live stream")) {
             return "live_event";
         }
-        if (this.text.startsWith("Achieved ") || this.text.startsWith("I just set a goal ")) {
+        if (this.text.startsWith("Achieved ") || this.text.startsWith("I just finished my goal")) {
             return "achievement";
         }
         return "miscellaneous";
@@ -27,9 +27,20 @@ class Tweet {
     }
 
     get writtenText():string {
-        // Remove links and the app's hashtag before looking for a comment
-        let text = this.text.replace(/https?:\/\/\S+/g, "");
-        text = text.replace(/#Runkeeper\b/gi, "").trim();
+        // remove links and the app's hashtag before looking for a comment
+        let words = this.text.replaceAll("\n", " ").split(" ");
+        let text = "";
+        for (let i = 0; i < words.length; i++) {
+            let word = words[i];
+            if (word.startsWith("https://") ) {
+                continue;
+            }
+            if (word.toLowerCase().startsWith("#runkeeper")) {
+                continue;
+            }
+            text += word + " ";
+        }
+        text = text.trim();
 
         if (this.source == "miscellaneous") {
             return text;
@@ -38,7 +49,7 @@ class Tweet {
             return "";
         }
 
-        // seperator
+        // find where the written comment starts
         let separator = text.indexOf(" - ");
         if (separator != -1) {
             text = text.substring(separator + 3).trim();
@@ -97,7 +108,14 @@ class Tweet {
     }
 
     getHTMLTableRow(rowNumber:number):string {
-        // TODO: return a table row which summarizes the tweet with a clickable link to the RunKeeper activity
-        return "<tr></tr>";
+        // turn line breaks into spaces before splitting the tweet
+        let words = this.text.replaceAll("\n", " ").split(" ");
+        for (let i = 0; i < words.length; i++) {
+            if (words[i].startsWith("https://") || words[i].startsWith("http://")) {
+                words[i] = '<a href="' + words[i] + '">' + words[i] + '</a>';
+            }
+        }
+
+        return "<tr><td>" + rowNumber + "</td><td>" + this.activityType + "</td><td>" + words.join(" ") + "</td></tr>";
     }
 }

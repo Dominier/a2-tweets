@@ -19,7 +19,8 @@ function parseTweets(runkeeper_tweets) {
 	let miscellaneous = 0;
 	let written = 0;
 
-	for (let tweet of tweet_array) {
+	for (let i = 0; i < tweet_array.length; i++) {
+		let tweet = tweet_array[i];
 		if (firstDate === null || tweet.time < firstDate) {
 			firstDate = tweet.time;
 		}
@@ -28,11 +29,13 @@ function parseTweets(runkeeper_tweets) {
 		}
 
 		let source = tweet.source;
+
 		if (source === 'completed_event') {
 			completedEvents++;
 			if (tweet.written) {
 				written++;
 			}
+			
 		} else if (source === 'live_event') {
 			liveEvents++;
 		} else if (source === 'achievement') {
@@ -43,8 +46,13 @@ function parseTweets(runkeeper_tweets) {
 	}
 
 	let dateOptions = { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' };
-	document.getElementById('firstDate').textContent = firstDate === null ? 'N/A' : firstDate.toLocaleDateString('en-US', dateOptions);
-	document.getElementById('lastDate').textContent = lastDate === null ? 'N/A' : lastDate.toLocaleDateString('en-US', dateOptions);
+	document.getElementById('firstDate').textContent = 'N/A';
+	document.getElementById('lastDate').textContent = 'N/A';
+
+	if (firstDate !== null && lastDate !== null) {
+		document.getElementById('firstDate').textContent = firstDate.toLocaleDateString('en-US', dateOptions);
+		document.getElementById('lastDate').textContent = lastDate.toLocaleDateString('en-US', dateOptions);
+	}
 
 	updateSummary('completedEvents', completedEvents, tweet_array.length);
 	updateSummary('liveEvents', liveEvents, tweet_array.length);
@@ -55,9 +63,10 @@ function parseTweets(runkeeper_tweets) {
 
 function updateSummary(className, count, total) {
 	// some counts appear more than once, so update every matching span
-	document.querySelectorAll('.' + className).forEach(function(span) {
-		span.textContent = count;
-	});
+	let spans = document.querySelectorAll('.' + className);
+	for (let i = 0; i < spans.length; i++) {
+		spans[i].textContent = count;
+	}
 
 	let percentage = 0;
 	if (total > 0) {
@@ -66,7 +75,7 @@ function updateSummary(className, count, total) {
 	document.querySelector('.' + className + 'Pct').textContent = percentage.toFixed(2) + '%';
 }
 
-// w ait for the DOM to load
+// wait for the DOM to load
 document.addEventListener('DOMContentLoaded', function (event) {
 	loadSavedRunkeeperTweets().then(parseTweets);
 });
